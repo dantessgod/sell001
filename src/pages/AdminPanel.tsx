@@ -105,7 +105,7 @@ const Sidebar = memo(function Sidebar({
 export default function AdminPanel({ onLogout, onViewSite }: { onLogout: () => void; onViewSite: () => void }) {
   const [tab, setTab] = useState('info');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { data } = useTournament();
+  const { data, cloudEnabled, loading } = useTournament();
 
   const currentTab = TABS.find(t => t.id === tab);
 
@@ -136,7 +136,7 @@ export default function AdminPanel({ onLogout, onViewSite }: { onLogout: () => v
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
             <span className="font-black text-white text-sm tracking-widest uppercase" style={{ fontFamily: 'Rajdhani' }}>
-              <span className="text-blue-400">Counter Cup</span>
+              <span className="text-blue-400">{data.name}</span>
               <span className="text-gray-600 mx-2">·</span>
               <span className="text-gray-300">Admin</span>
             </span>
@@ -152,9 +152,18 @@ export default function AdminPanel({ onLogout, onViewSite }: { onLogout: () => v
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <button onClick={onViewSite}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-400 border border-blue-800/40 hover:bg-blue-900/20 transition-all">
+          <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold"
+              style={{
+                borderColor: cloudEnabled ? 'rgba(34,197,94,0.35)' : 'rgba(234,179,8,0.25)',
+                color: cloudEnabled ? '#4ade80' : '#facc15',
+                background: cloudEnabled ? 'rgba(34,197,94,0.08)' : 'rgba(234,179,8,0.08)'
+              }}>
+              <span className={`w-2 h-2 rounded-full ${loading ? 'bg-gray-500' : cloudEnabled ? 'bg-green-400' : 'bg-yellow-400'}`} />
+              {loading ? 'Загрузка...' : cloudEnabled ? 'Общий cloud-режим' : 'Локальный режим'}
+            </div>
+            <button onClick={onViewSite}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-400 border border-blue-800/40 hover:bg-blue-900/20 transition-all">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>

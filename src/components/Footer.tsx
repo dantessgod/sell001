@@ -24,13 +24,13 @@ export default function Footer({ onAdminClick }: { onAdminClick: () => void }) {
             <div className="flex items-center gap-3 mb-4">
               <img
                 src={data.orgLogo}
-                alt="Counter Cup"
+                alt={data.name}
                 className="w-10 h-10 rounded object-cover"
                 style={{ border: '1px solid rgba(59,130,246,0.4)' }}
                 onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
               <span className="text-xl font-black tracking-widest text-white" style={{ fontFamily: 'Rajdhani' }}>
-                <span className="text-blue-400">COUNTER</span> CUP
+                {data.name}
               </span>
             </div>
             <p className="text-gray-600 text-sm leading-relaxed mb-5">{data.subtitle}</p>
@@ -109,7 +109,7 @@ export default function Footer({ onAdminClick }: { onAdminClick: () => void }) {
         <div className="pt-6" style={{ borderTop: '1px solid rgba(59,130,246,0.1)' }}>
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-gray-700 text-xs">
-              © 2025 Counter Cup. Все права защищены.
+              © 2025 {data.name}. Все права защищены.
             </p>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">

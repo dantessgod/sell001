@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase, isSupabaseConfigured, SUPABASE_ROW_ID, SUPABASE_TABLE } from '../lib/supabase';
 
 export interface Team {
   id: string;
@@ -71,6 +72,8 @@ export interface TournamentData {
   orgLogo: string;
   registrationBotToken: string;
   registrationChatId: string;
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
 }
 
 const defaultData: TournamentData = {
@@ -127,6 +130,8 @@ const defaultData: TournamentData = {
   orgLogo: 'https://sun9-78.userapi.com/s/v1/ig2/6jHYWoD5FhRcJQvW7-QGMc5Bs2czfuLj3qzAGpr037JAcKo_wg9odRvMYwWZ4tlmHr0rS9spfI32iV-zobpIUnhx.jpg?quality=95&as=32x30,48x45,72x67,108x101,160x150,240x225,360x338,480x450,540x506,640x600,720x675,1080x1013,1170x1097&from=bu&cs=1170x0',
   registrationBotToken: '8608357753:AAHUR3bDmjyezPs_C0j-xIncv_HNTz6NfUE',
   registrationChatId: '5844108785',
+  supabaseUrl: '',
+  supabaseAnonKey: '',
   teams: [
     { id: '1', name: 'Team Alpha', logo: '🔵', players: 'Player1, Player2, Player3, Player4, Player5', country: 'RU' },
     { id: '2', name: 'Team Bravo', logo: '🟡', players: 'Player6, Player7, Player8, Player9, Player10', country: 'UA' },
@@ -166,19 +171,21 @@ const defaultData: TournamentData = {
 
 interface TournamentContextType {
   data: TournamentData;
-  updateData: (newData: Partial<TournamentData>) => void;
-  updateTeam: (team: Team) => void;
-  addTeam: (team: Team) => void;
-  removeTeam: (id: string) => void;
-  updateMatch: (match: Match) => void;
-  addMatch: (match: Match) => void;
-  removeMatch: (id: string) => void;
-  updatePrize: (index: number, prize: Prize) => void;
-  addPrize: (prize: Prize) => void;
-  removePrize: (index: number) => void;
-  updateSponsor: (sponsor: Sponsor) => void;
-  addSponsor: (sponsor: Sponsor) => void;
-  removeSponsor: (id: string) => void;
+  loading: boolean;
+  cloudEnabled: boolean;
+  updateData: (newData: Partial<TournamentData>) => Promise<void>;
+  updateTeam: (team: Team) => Promise<void>;
+  addTeam: (team: Team) => Promise<void>;
+  removeTeam: (id: string) => Promise<void>;
+  updateMatch: (match: Match) => Promise<void>;
+  addMatch: (match: Match) => Promise<void>;
+  removeMatch: (id: string) => Promise<void>;
+  updatePrize: (index: number, prize: Prize) => Promise<void>;
+  addPrize: (prize: Prize) => Promise<void>;
+  removePrize: (index: number) => Promise<void>;
+  updateSponsor: (sponsor: Sponsor) => Promise<void>;
+  addSponsor: (sponsor: Sponsor) => Promise<void>;
+  removeSponsor: (id: string) => Promise<void>;
 }
 
 const TournamentContext = createContext<TournamentContextType | null>(null);
@@ -192,53 +199,114 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
       return defaultData;
     }
   });
+  const [loading, setLoading] = useState(isSupabaseConfigured);
+
+  const persistData = useCallback(async (nextData: TournamentData) => {
+    setData(nextData);
+    localStorage.setItem('countercup_data', JSON.stringify(nextData));
+
+    if (!isSupabaseConfigured || !supabase) return;
+
+    const { error } = await supabase
+      .from(SUPABASE_TABLE)
+      .upsert({ id: SUPABASE_ROW_ID, data: nextData }, { onConflict: 'id' });
+
+    if (error) {
+      console.error('Supabase save error:', error.message);
+    }
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('countercup_data', JSON.stringify(data));
-  }, [data]);
+    let active = true;
 
-  const updateData = (newData: Partial<TournamentData>) =>
-    setData(prev => ({ ...prev, ...newData }));
+    const load = async () => {
+      if (!isSupabaseConfigured || !supabase) {
+        setLoading(false);
+        return;
+      }
 
-  const updateTeam = (team: Team) =>
-    setData(prev => ({ ...prev, teams: prev.teams.map(t => t.id === team.id ? team : t) }));
+      try {
+        const { data: row, error } = await supabase
+          .from(SUPABASE_TABLE)
+          .select('data')
+          .eq('id', SUPABASE_ROW_ID)
+          .maybeSingle();
 
-  const addTeam = (team: Team) =>
-    setData(prev => ({ ...prev, teams: [...prev.teams, team] }));
+        if (!active) return;
 
-  const removeTeam = (id: string) =>
-    setData(prev => ({ ...prev, teams: prev.teams.filter(t => t.id !== id) }));
+        if (error) {
+          console.error('Supabase load error:', error.message);
+          setLoading(false);
+          return;
+        }
 
-  const updateMatch = (match: Match) =>
-    setData(prev => ({ ...prev, matches: prev.matches.map(m => m.id === match.id ? match : m) }));
+        if (row?.data) {
+          const merged = { ...defaultData, ...(row.data as Partial<TournamentData>) };
+          setData(merged);
+          localStorage.setItem('countercup_data', JSON.stringify(merged));
+        } else {
+          await supabase.from(SUPABASE_TABLE).upsert({ id: SUPABASE_ROW_ID, data: defaultData }, { onConflict: 'id' });
+          if (active) localStorage.setItem('countercup_data', JSON.stringify(defaultData));
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
 
-  const addMatch = (match: Match) =>
-    setData(prev => ({ ...prev, matches: [...prev.matches, match] }));
+    load();
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const removeMatch = (id: string) =>
-    setData(prev => ({ ...prev, matches: prev.matches.filter(m => m.id !== id) }));
+  const updateData = async (newData: Partial<TournamentData>) =>
+    persistData({ ...data, ...newData });
 
-  const updatePrize = (index: number, prize: Prize) =>
-    setData(prev => { const p = [...prev.prizes]; p[index] = prize; return { ...prev, prizes: p }; });
+  const updateTeam = async (team: Team) =>
+    persistData({ ...data, teams: data.teams.map(t => t.id === team.id ? team : t) });
 
-  const addPrize = (prize: Prize) =>
-    setData(prev => ({ ...prev, prizes: [...prev.prizes, prize] }));
+  const addTeam = async (team: Team) =>
+    persistData({ ...data, teams: [...data.teams, team] });
 
-  const removePrize = (index: number) =>
-    setData(prev => ({ ...prev, prizes: prev.prizes.filter((_, i) => i !== index) }));
+  const removeTeam = async (id: string) =>
+    persistData({ ...data, teams: data.teams.filter(t => t.id !== id) });
 
-  const updateSponsor = (sponsor: Sponsor) =>
-    setData(prev => ({ ...prev, sponsors: prev.sponsors.map(s => s.id === sponsor.id ? sponsor : s) }));
+  const updateMatch = async (match: Match) =>
+    persistData({ ...data, matches: data.matches.map(m => m.id === match.id ? match : m) });
 
-  const addSponsor = (sponsor: Sponsor) =>
-    setData(prev => ({ ...prev, sponsors: [...prev.sponsors, sponsor] }));
+  const addMatch = async (match: Match) =>
+    persistData({ ...data, matches: [...data.matches, match] });
 
-  const removeSponsor = (id: string) =>
-    setData(prev => ({ ...prev, sponsors: prev.sponsors.filter(s => s.id !== id) }));
+  const removeMatch = async (id: string) =>
+    persistData({ ...data, matches: data.matches.filter(m => m.id !== id) });
+
+  const updatePrize = async (index: number, prize: Prize) => {
+    const p = [...data.prizes];
+    p[index] = prize;
+    await persistData({ ...data, prizes: p });
+  };
+
+  const addPrize = async (prize: Prize) =>
+    persistData({ ...data, prizes: [...data.prizes, prize] });
+
+  const removePrize = async (index: number) =>
+    persistData({ ...data, prizes: data.prizes.filter((_, i) => i !== index) });
+
+  const updateSponsor = async (sponsor: Sponsor) =>
+    persistData({ ...data, sponsors: data.sponsors.map(s => s.id === sponsor.id ? sponsor : s) });
+
+  const addSponsor = async (sponsor: Sponsor) =>
+    persistData({ ...data, sponsors: [...data.sponsors, sponsor] });
+
+  const removeSponsor = async (id: string) =>
+    persistData({ ...data, sponsors: data.sponsors.filter(s => s.id !== id) });
 
   return (
     <TournamentContext.Provider value={{
-      data, updateData,
+      data,
+      loading,
+      cloudEnabled: isSupabaseConfigured,
+      updateData,
       updateTeam, addTeam, removeTeam,
       updateMatch, addMatch, removeMatch,
       updatePrize, addPrize, removePrize,

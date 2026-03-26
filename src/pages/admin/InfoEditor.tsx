@@ -240,6 +240,10 @@ export default memo(function InfoEditor() {
         <div className="text-xs text-blue-500 font-bold uppercase tracking-widest flex items-center gap-2">
           <div className="w-4 h-0.5 bg-blue-600" /> Ссылки и контакты
         </div>
+        <div className="rounded-xl p-4 text-sm text-blue-100/85 bg-blue-950/30 border border-blue-700/25">
+          Чтобы изменения из админки были видны всем посетителям сайта, подключите Supabase в файле <code>src/lib/supabase.ts</code>.
+          Пока Supabase не настроен, сайт работает в локальном режиме и изменения сохраняются только в текущем браузере.
+        </div>
         <div className="grid md:grid-cols-2 gap-5">
           <Field label="Telegram канал">
             <input className={inp} value={tgChannel} onChange={e => setTgChannel(e.target.value)} placeholder="https://t.me/..." />

@@ -70,7 +70,7 @@ export default function Login({ onSuccess, onBack }: { onSuccess: () => void; on
               <h1 className="text-2xl font-black text-white tracking-widest mb-1" style={{ fontFamily: 'Rajdhani' }}>
                 <span className="text-blue-400">ADMIN</span> PANEL
               </h1>
-              <p className="text-gray-600 text-sm">Counter Cup · Панель управления</p>
+              <p className="text-gray-600 text-sm">Панель управления турниром</p>
             </div>
 
             {/* Form */}

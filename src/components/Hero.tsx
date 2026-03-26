@@ -50,13 +50,9 @@ export default function Hero() {
         </div>
 
         {/* Title */}
-        <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tight mb-4 text-glow"
+        <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tight mb-4 text-glow whitespace-pre-line"
           style={{ fontFamily: 'Rajdhani', lineHeight: 0.9 }}>
-          <span className="text-white">COUNTER</span>
-          <br />
-          <span style={{ background: 'linear-gradient(135deg, #3b82f6, #60a5fa, #93c5fd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            CUP
-          </span>
+          {data.name}
         </h1>
 
         <p className="text-blue-300 text-lg md:text-xl tracking-widest uppercase mb-4">{data.subtitle}</p>

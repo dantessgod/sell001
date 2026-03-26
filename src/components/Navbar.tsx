@@ -28,7 +28,7 @@ export default function Navbar({ onAdminClick }: { onAdminClick: () => void }) {
             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
           <span className="font-bold text-lg tracking-widest text-white" style={{ fontFamily: 'Rajdhani' }}>
-            <span className="text-blue-400">COUNTER</span> CUP
+            {data.name}
           </span>
         </a>
 
